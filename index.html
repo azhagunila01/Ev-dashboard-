@@ -1,0 +1,1342 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chennai EV Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<style>
+:root{
+  --bg:#030712;
+  --bg2:#07121f;
+  --panel:rgba(8,20,34,.82);
+  --panel-strong:rgba(10,25,44,.94);
+  --line:rgba(82,197,255,.18);
+  --line-strong:rgba(82,197,255,.34);
+  --text:#d7f3ff;
+  --muted:#79a9c7;
+  --cyan:#52d8ff;
+  --blue:#3b82f6;
+  --green:#18f5b3;
+  --red:#ff5f7a;
+  --amber:#ffb454;
+  --violet:#8b7bff;
+  --pink:#ff70e1;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{min-height:100%}
+body{
+  background:radial-gradient(circle at top, rgba(26,83,146,.18), transparent 34%),linear-gradient(180deg,#02050b 0%,#06111e 52%,#020812 100%);
+  color:var(--text);
+  font-family:'Segoe UI',system-ui,Arial,sans-serif;
+  padding:18px;
+  max-width:1600px;
+  margin:0 auto;
+  position:relative;
+  overflow-x:hidden;
+}
+body::before,body::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:-2;
+}
+body::before{
+  background:
+    radial-gradient(circle at 20% 20%, rgba(82,216,255,.14), transparent 18%),
+    radial-gradient(circle at 80% 10%, rgba(59,130,246,.12), transparent 18%),
+    radial-gradient(circle at 70% 70%, rgba(24,245,179,.10), transparent 22%);
+  animation:aurora 16s linear infinite alternate;
+}
+body::after{
+  background-image:
+    linear-gradient(rgba(82,216,255,.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(82,216,255,.06) 1px, transparent 1px),
+    linear-gradient(180deg, transparent 0%, rgba(82,216,255,.04) 48%, transparent 100%);
+  background-size:26px 26px,26px 26px,100% 180px;
+  animation:gridMove 14s linear infinite;
+  opacity:.5;
+}
+.orb{
+  position:fixed;
+  border-radius:50%;
+  filter:blur(8px);
+  opacity:.18;
+  pointer-events:none;
+  z-index:-1;
+  animation:float 10s ease-in-out infinite;
+}
+.orb.one{width:220px;height:220px;background:var(--cyan);top:8%;left:-50px}
+.orb.two{width:160px;height:160px;background:var(--blue);top:58%;right:5%;animation-delay:-3s}
+.orb.three{width:120px;height:120px;background:var(--green);bottom:8%;left:10%;animation-delay:-6s}
+.header-wrap{
+  background:linear-gradient(180deg, rgba(10,30,51,.72), rgba(5,16,28,.86));
+  border:1px solid var(--line-strong);
+  border-radius:18px;
+  padding:18px 18px 14px;
+  box-shadow:0 0 0 1px rgba(82,216,255,.08) inset, 0 16px 40px rgba(0,0,0,.28);
+  position:relative;
+  overflow:hidden;
+}
+.header-wrap::before{
+  content:'';
+  position:absolute;
+  inset:auto -20% 0 -20%;
+  height:2px;
+  background:linear-gradient(90deg, transparent, var(--cyan), transparent);
+  animation:scan 4s linear infinite;
+}
+.header{font-size:30px;font-weight:900;letter-spacing:1px;color:#bff4ff;text-shadow:0 0 12px rgba(82,216,255,.22)}
+.subheader{font-size:12px;color:var(--muted);margin-top:6px;letter-spacing:1.2px;text-transform:uppercase}
+.topbar{display:flex;gap:10px;margin:16px 0 8px;flex-wrap:wrap;align-items:center}
+.status-line{display:flex;gap:10px;font-size:12px;color:var(--muted);margin:10px 0 16px;align-items:center;flex-wrap:wrap}
+.status-dot{width:10px;height:10px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:blink 1.8s infinite}
+.input-shell,.chip,.card,.panel-shell,.chart-card,table,.tabs{backdrop-filter:blur(12px)}
+input,select{
+  padding:12px 14px;
+  background:rgba(6,20,34,.86);
+  border:1px solid var(--line);
+  color:var(--text);
+  flex:1;
+  border-radius:12px;
+  min-width:180px;
+  font-size:13px;
+  box-shadow:0 0 0 1px rgba(82,216,255,.04) inset;
+}
+input{min-width:220px}
+select{appearance:none;cursor:pointer}
+input:focus,select:focus{border-color:var(--cyan);outline:none;box-shadow:0 0 0 3px rgba(82,216,255,.12)}
+.filter-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0 4px}
+.filter-toolbar .badge{background:rgba(124,252,0,.08);border-color:rgba(124,252,0,.18);color:#dfffc3}
+.filter-summary{font-size:11px;color:var(--muted);margin-top:8px}
+button{
+  padding:11px 18px;
+  background:linear-gradient(135deg, var(--cyan), #0095d9);
+  color:#04121d;
+  border:none;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:800;
+  font-size:13px;
+  transition:.22s ease;
+  box-shadow:0 8px 22px rgba(0,149,217,.22);
+}
+button:hover{transform:translateY(-1px);filter:brightness(1.06)}
+button.secondary{background:linear-gradient(135deg,#334155,#0f172a);color:var(--text);box-shadow:none;border:1px solid var(--line)}
+.tabs{display:flex;gap:6px;margin:18px 0 14px;flex-wrap:wrap}
+.tab{
+  padding:11px 16px;
+  cursor:pointer;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:700;
+  border:1px solid transparent;
+  border-radius:12px;
+  transition:.2s ease;
+  letter-spacing:.5px;
+}
+.tab:hover{color:#dff8ff;background:rgba(8,22,37,.6)}
+.tab.active{color:#021019;background:linear-gradient(135deg, rgba(82,216,255,.95), rgba(24,245,179,.78));border-color:rgba(82,216,255,.55);box-shadow:0 0 18px rgba(82,216,255,.24)}
+.panel{display:none}
+.panel.active{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
+.card,.panel-shell,.chart-card,table{
+  background:linear-gradient(180deg, rgba(8,20,34,.9), rgba(5,14,24,.94));
+  border:1px solid var(--line);
+  border-radius:16px;
+  box-shadow:0 0 0 1px rgba(82,216,255,.05) inset, 0 14px 28px rgba(0,0,0,.2);
+}
+.card{padding:16px;text-align:center;position:relative;overflow:hidden}
+.card::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg, rgba(82,216,255,.11), transparent 35%, transparent 60%, rgba(24,245,179,.07));
+  pointer-events:none;
+}
+.label{font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;font-weight:800}
+.value{font-size:30px;font-weight:900;color:#fff;text-shadow:0 0 14px rgba(82,216,255,.16)}
+.panel-shell{padding:14px;margin:14px 0}
+.chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:14px 0}
+.chart-card{padding:12px;min-height:320px;display:flex;flex-direction:column}
+.chart-card.large{min-height:350px}
+.chart{height:240px;position:relative}
+.chart.tall{height:300px}
+.chart-title{font-size:11px;color:#9fdfff;font-weight:800;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
+.chart-subtitle{font-size:11px;color:var(--muted);margin-bottom:10px}
+.legend-box{margin-top:10px;max-height:140px;overflow:auto;padding-right:4px}
+.legend-item{display:flex;align-items:flex-start;gap:8px;font-size:11px;padding:5px 0;border-bottom:1px solid rgba(82,216,255,.08)}
+.legend-dot{width:12px;height:12px;border-radius:3px;flex:0 0 12px;margin-top:2px}
+.legend-main{color:#e7fbff;font-weight:700}
+.legend-sub{color:var(--muted);font-size:10px;margin-top:2px;line-height:1.45}
+.pulse-bar{width:100%;height:26px;background:rgba(5,19,31,.86);border-radius:999px;overflow:hidden;display:flex;margin:12px 0;border:1px solid var(--line)}
+.pulse-seg{display:flex;align-items:center;justify-content:center;color:#021019;font-weight:800;font-size:10px;transition:width .5s ease}
+table{width:100%;font-size:11px;border-collapse:collapse;margin:14px 0;overflow:hidden}
+th{background:rgba(8,24,40,.95);color:#9fe9ff;padding:11px 10px;font-size:10px;font-weight:800;text-transform:uppercase;border-bottom:1px solid var(--line);letter-spacing:.8px;position:sticky;top:0;text-align:center;vertical-align:middle}
+td{padding:9px 10px;border-bottom:1px solid rgba(82,216,255,.08);color:#dff6ff;text-align:center;vertical-align:middle}
+th:first-child,td:first-child{text-align:left}
+tr:hover td{background:rgba(5,17,29,.92)}
+.table-wrap{overflow:auto;border-radius:16px}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:12px}
+.stat-row{display:flex;justify-content:center;gap:14px;padding:9px 0;border-bottom:1px solid rgba(82,216,255,.08);font-size:11px;text-align:center}
+.stat-label{color:var(--muted)}
+.stat-value{color:var(--text);font-weight:800}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.6px;border:1px solid rgba(82,216,255,.18);background:rgba(82,216,255,.08);color:#bfefff}
+.small-note{color:var(--muted);font-size:11px;margin-top:10px}
+.footer-note{font-size:11px;color:var(--muted);margin-top:12px}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:rgba(82,216,255,.22);border-radius:10px}
+::-webkit-scrollbar-track{background:rgba(7,18,31,.4)}
+@keyframes aurora{0%{transform:translate3d(0,0,0) scale(1)}100%{transform:translate3d(0,-30px,0) scale(1.08)}}
+@keyframes gridMove{0%{background-position:0 0,0 0,0 -160px}100%{background-position:0 26px,26px 0,0 160px}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-24px)}}
+@keyframes scan{0%{transform:translateX(-55%)}100%{transform:translateX(55%)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+@media (max-width:900px){
+  .header{font-size:24px}
+  .chart-grid{grid-template-columns:1fr}
+  .chart-card{min-height:300px}
+}
+
+.lock-screen{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%, rgba(82,216,255,.14), rgba(1,5,11,.94) 36%, rgba(1,4,9,.98) 100%)}
+.lock-card{width:min(92vw,460px);padding:28px 24px;border-radius:22px;border:1px solid rgba(82,216,255,.28);background:linear-gradient(180deg, rgba(5,16,28,.95), rgba(4,10,18,.98));box-shadow:0 0 0 1px rgba(82,216,255,.06) inset,0 24px 60px rgba(0,0,0,.42);position:relative;overflow:hidden}
+.lock-card::before{content:'';position:absolute;inset:auto -20% 0 -20%;height:2px;background:linear-gradient(90deg, transparent, var(--cyan), transparent);animation:scan 4s linear infinite}
+.lock-title{font-size:28px;font-weight:900;letter-spacing:1px;color:#d9f8ff;text-shadow:0 0 18px rgba(82,216,255,.24)}
+.lock-sub{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin:8px 0 16px}
+.lock-note{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5}
+.lock-error{min-height:18px;font-size:12px;color:#ff889d;margin-top:10px}
+body.locked>*:not(.lock-screen){filter:blur(8px) saturate(.7) brightness(.7);pointer-events:none;user-select:none}
+.movie-bar{position:fixed;left:0;right:0;height:30px;background:linear-gradient(180deg, rgba(0,0,0,.95), rgba(0,0,0,.72));z-index:40;pointer-events:none;box-shadow:0 0 24px rgba(0,0,0,.6)}
+.movie-bar.top{top:0}.movie-bar.bottom{bottom:0;transform:rotate(180deg)}
+body{padding-top:42px;padding-bottom:42px}
+body::selection{background:rgba(82,216,255,.24)}
+.header-wrap,.panel-shell,.chart-card,.card,table{position:relative}
+.header-wrap::after,.panel-shell::after,.chart-card::after{content:'';position:absolute;inset:0;background:linear-gradient(120deg, transparent 0%, rgba(255,255,255,.04) 18%, transparent 38%);transform:translateX(-120%);animation:shimmer 7.5s linear infinite;pointer-events:none}
+.card:hover,.chart-card:hover,.panel-shell:hover{transform:translateY(-2px);box-shadow:0 0 0 1px rgba(82,216,255,.08) inset,0 18px 36px rgba(0,0,0,.28),0 0 28px rgba(82,216,255,.08)}
+.card,.chart-card,.panel-shell{transition:transform .22s ease, box-shadow .22s ease}
+.sound-toggle{padding:7px 10px;font-size:11px;margin-left:auto}
+.cmd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:14px 0}
+.cmd-table-title{font-size:12px;font-weight:800;color:#bfefff;letter-spacing:1px;text-transform:uppercase;margin:16px 0 8px}
+.panel-shell.movie-shell{background:linear-gradient(180deg, rgba(9,18,29,.92), rgba(4,10,18,.98));border-color:rgba(82,216,255,.22)}
+@keyframes shimmer{0%{transform:translateX(-120%)}100%{transform:translateX(220%)}}
+
+
+
+:root{
+  --bg:#010204;
+  --bg2:#060b14;
+  --panel:rgba(6,10,18,.88);
+  --panel-strong:rgba(7,12,20,.96);
+  --line:rgba(100,180,255,.14);
+  --line-strong:rgba(120,195,255,.26);
+  --text:#dcefff;
+  --muted:#7f97b6;
+  --cyan:#8fd8ff;
+  --blue:#4d77ff;
+  --green:#61e4c9;
+  --red:#ff6b91;
+  --amber:#ffbd66;
+  --violet:#9d8cff;
+  --pink:#f37dff;
+}
+body{
+  background:
+    radial-gradient(circle at 50% 0%, rgba(95,141,255,.12), transparent 24%),
+    radial-gradient(circle at 12% 18%, rgba(76,170,255,.08), transparent 18%),
+    radial-gradient(circle at 78% 16%, rgba(157,140,255,.06), transparent 20%),
+    linear-gradient(180deg,#010204 0%,#050913 48%,#02050b 100%);
+  color:var(--text);
+}
+body::before{
+  background:
+    radial-gradient(circle at 22% 22%, rgba(143,216,255,.08), transparent 18%),
+    radial-gradient(circle at 82% 10%, rgba(77,119,255,.08), transparent 18%),
+    radial-gradient(circle at 72% 70%, rgba(97,228,201,.06), transparent 22%);
+}
+body::after{opacity:.34}
+.movie-bar{background:linear-gradient(180deg, rgba(0,0,0,.98), rgba(0,0,0,.78));height:36px}
+body{padding-top:46px;padding-bottom:46px}
+.header-wrap,.panel-shell,.chart-card,.card,.table-wrap,.tabs,.lock-card{
+  background:linear-gradient(180deg, rgba(7,11,18,.94), rgba(3,6,11,.98));
+  border-color:rgba(125,180,255,.14)!important;
+  box-shadow:0 0 0 1px rgba(140,205,255,.04) inset, 0 18px 50px rgba(0,0,0,.40)!important;
+}
+.header{letter-spacing:1.4px;text-transform:uppercase;color:#eef7ff;text-shadow:0 0 22px rgba(143,216,255,.16)}
+.subheader,.badge,.footer-note,.chart-subtitle,.legend-sub{color:#8c9ab6}
+.card:hover,.chart-card:hover,.panel-shell:hover{box-shadow:0 0 0 1px rgba(140,205,255,.07) inset, 0 20px 46px rgba(0,0,0,.44), 0 0 24px rgba(120,170,255,.05)!important}
+.tab.active{background:linear-gradient(135deg,#d6ebff,#93b8ff);color:#07121d;box-shadow:0 8px 24px rgba(147,184,255,.18)}
+button{background:linear-gradient(135deg,#dce8ff,#86aefe);color:#050c14;box-shadow:0 10px 24px rgba(134,174,254,.16)}
+button.secondary{background:linear-gradient(135deg,#131a26,#090d14);color:#dcefff;border:1px solid rgba(125,180,255,.12)}
+.lock-screen{background:radial-gradient(circle at 50% 28%, rgba(143,216,255,.10), rgba(1,3,7,.95) 34%, rgba(0,0,0,.99) 100%)}
+.lock-card::before{background:linear-gradient(90deg, transparent, #c8dcff, transparent)}
+.lock-title{text-shadow:0 0 14px rgba(143,216,255,.12)}
+</style>
+</head>
+
+<body>
+<div class="movie-bar top"></div>
+<div class="movie-bar bottom"></div>
+<div class="orb one"></div><div class="orb two"></div><div class="orb three"></div>
+
+
+
+<div class="header-wrap">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div>
+      <div class="header">CHENNAI EV FLEET DASHBOARD</div>
+      <div class="subheader">Shadowfax Technologies • Fleet Operations Intelligence</div>
+    </div>
+    
+  </div>
+  <div class="filter-toolbar">
+    <select id="vendorFilter"></select>
+    <select id="clientFilter"></select>
+    <button class="secondary" onclick="clearGlobalFilters()" style="padding:12px">CLEAR</button>
+    <div class="badge" id="rowCount">0</div>
+  </div>
+  <div class="status-line">
+    <div class="status-dot"></div>
+    <span id="filterSummary">Filters: All vendors • All clients</span>
+    <span id="lastLoaded">Awaiting sync...</span>
+  </div>
+  <input type="text" id="url" value="https://script.google.com/macros/s/AKfycbwc2TrJMjRgy_TZhNHfZumXKo-0NgicjuZyxVHxc2JZ_CAN4A-tLY818bdwk4dnUEiN/exec" style="width:100%;margin-top:8px">
+  <div id="loadStatus" class="footer-note" style="margin-top:10px;min-height:20px">Live loader ready.</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="tab('f',this)">FLEET STATUS</div>
+  <div class="tab" onclick="tab('c',this)">CLIENT-WISE ANALYSIS</div>
+  <div class="tab" onclick="tab('t',this)">TL ANALYSIS</div>
+  <div class="tab" onclick="tab('d',this)">DEPLOYMENT</div>
+  <div class="tab" onclick="tab('r',this)">SURRENDER</div>
+  <div class="tab" onclick="tab('v',this)">VENDOR ANALYSIS</div>
+  <div class="tab" onclick="tab('o',this)">ORDERS DATA</div>
+  <div class="tab" onclick="tab('m',this)">MOVEMENT ANALYSIS</div>
+</div>
+
+<div id="f" class="panel active">
+  <div class="grid">
+    <div class="card"><div class="label">Active EV</div><div class="value" id="a">-</div></div>
+    <div class="card"><div class="label">Absconding</div><div class="value" id="b">-</div></div>
+    <div class="card"><div class="label">Under Repair</div><div class="value" id="rep">-</div></div>
+    <div class="card"><div class="label">Quality Check</div><div class="value" id="qc">-</div></div>
+    <div class="card"><div class="label">Ready For Deploy</div><div class="value" id="rf">-</div></div>
+    <div class="card"><div class="label">RFD No Battery</div><div class="value" id="rfnb">-</div></div>
+    <div class="card"><div class="label">Missing Vehicle</div><div class="value" id="mv">-</div></div>
+    <div class="card"><div class="label">Today Surrender</div><div class="value" id="sur">-</div></div>
+    <div class="card"><div class="label">Today Deployed</div><div class="value" id="rec">-</div></div>
+  </div>
+  <div class="panel-shell">
+    <div class="chart-title">Fleet Composition Pulse</div>
+    <div class="pulse-bar" id="pulseBar"></div>
+    <div id="pulseLegend" class="legend-box"></div>
+  </div>
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Status Distribution</div>
+      <div class="chart"><canvas id="statusChart"></canvas></div>
+      <div id="statusLegend" class="legend-box"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Active vs Abscond • Vehicle Type</div>
+      <div class="chart"><canvas id="activeAbsVehicleChart"></canvas></div>
+      <div id="activeAbsVehicleLegend" class="legend-box"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Repair Split • Swap vs Charger</div>
+      <div class="chart"><canvas id="repairTypeChart"></canvas></div>
+      <div id="repairTypeLegend" class="legend-box"></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">By Vehicle Type</div>
+      <div class="kpi-row">
+        <div><div class="stat-row"><span class="stat-label">Active Swap</span><span class="stat-value" id="asw">-</span></div></div>
+        <div><div class="stat-row"><span class="stat-label">Active Charger</span><span class="stat-value" id="ach">-</span></div></div>
+        <div><div class="stat-row"><span class="stat-label">Abscond Swap</span><span class="stat-value" id="absSw">-</span></div></div>
+        <div><div class="stat-row"><span class="stat-label">Abscond Charger</span><span class="stat-value" id="absCh">-</span></div></div>
+        <div><div class="stat-row"><span class="stat-label">Repair Swap</span><span class="stat-value" id="repSw">-</span></div></div>
+        <div><div class="stat-row"><span class="stat-label">Repair Charger</span><span class="stat-value" id="repCh">-</span></div></div>
+        <div><div class="stat-row"><span class="stat-label">RFD Swap</span><span class="stat-value" id="rsw">-</span></div></div>
+        <div><div class="stat-row"><span class="stat-label">RFD Charger</span><span class="stat-value" id="rch">-</span></div></div>
+      </div>
+      <div class="footer-note">JARVIS theme now includes animated grid background, glow panels and live pulse styling.</div>
+    </div>
+  </div>
+</div>
+
+<div id="c" class="panel">
+  <div class="panel-shell">
+    <div class="chart-title">Client Intelligence</div>
+    <div class="chart-subtitle">Client-wise donuts for total bikes, active, abscond, 7-day zero orders and login days below 3.</div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">Client Focus • Active + Abscond</div>
+        <div class="chart"><canvas id="clientFocusChart"></canvas></div>
+        <div id="clientFocusLegend" class="legend-box"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Client-wise Total Bikes</div>
+        <div class="chart"><canvas id="clientTotalChart"></canvas></div>
+        <div id="clientTotalLegend" class="legend-box"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Client-wise Active</div>
+        <div class="chart"><canvas id="clientActiveChart"></canvas></div>
+        <div id="clientActiveLegend" class="legend-box"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Client-wise Abscond</div>
+        <div class="chart"><canvas id="clientAbscondChart"></canvas></div>
+        <div id="clientAbscondLegend" class="legend-box"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Client-wise 7 Days 0 Orders</div>
+        <div class="chart"><canvas id="clientZeroOrdersChart"></canvas></div>
+        <div id="clientZeroOrdersLegend" class="legend-box"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Client-wise Login Days Below 3</div>
+        <div class="chart"><canvas id="clientLoginBelow3Chart"></canvas></div>
+        <div id="clientLoginBelow3Legend" class="legend-box"></div>
+      </div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="clientTable"><tr><th>Client</th><th>Total EV</th><th>Active</th><th>Abscond</th><th>Swap</th><th>Charger</th><th>Repair</th><th>7D 0 Orders</th><th>Login &lt; 3</th></tr></table>
+  </div>
+</div>
+
+<div id="t" class="panel">
+  <div class="panel-shell">
+    <div class="topbar" style="margin:0 0 8px 0">
+      <input type="text" id="tlSearch" placeholder="Search TL name..." style="margin:0">
+      <span class="badge">TL-wise total, active and abscond donuts</span>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">TL-wise Total Bikes</div>
+        <div class="chart"><canvas id="tlTotalChart"></canvas></div>
+        <div id="tlTotalLegend" class="legend-box"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">TL-wise Active</div>
+        <div class="chart"><canvas id="tlActiveChart"></canvas></div>
+        <div id="tlActiveLegend" class="legend-box"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">TL-wise Abscond</div>
+        <div class="chart"><canvas id="tlAbscondChart"></canvas></div>
+        <div id="tlAbscondLegend" class="legend-box"></div>
+      </div>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table id="tlTable"><tr><th>TL Name</th><th>Total Bikes</th><th>Active</th><th>Abscond</th><th>Swap</th><th>Charger</th></tr></table>
+  </div>
+</div>
+
+<div id="d" class="panel">
+  <div class="grid">
+    <div class="card"><div class="label">Deployed Today</div><div class="value" id="dt">-</div></div>
+    <div class="card"><div class="label">Deployed Week</div><div class="value" id="dw">-</div></div>
+  </div>
+  <div class="chart-card large">
+    <div class="chart-title">Deployment Trend</div>
+    <div class="chart tall"><canvas id="deployChart"></canvas></div>
+  </div>
+  <div class="table-wrap">
+    <table id="deployTable"><tr><th>Date</th><th>Bikes Deployed</th></tr></table>
+  </div>
+</div>
+
+<div id="r" class="panel">
+  <div class="grid">
+    <div class="card"><div class="label">Sur Today</div><div class="value" id="st">-</div></div>
+    <div class="card"><div class="label">Rec Today</div><div class="value" id="rt">-</div></div>
+    <div class="card"><div class="label">Abs Today</div><div class="value" id="at">-</div></div>
+    <div class="card"><div class="label">Sur Week</div><div class="value" id="sw">-</div></div>
+    <div class="card"><div class="label">Rec Week</div><div class="value" id="rw">-</div></div>
+    <div class="card"><div class="label">Abs Week</div><div class="value" id="aw">-</div></div>
+  </div>
+  <div class="chart-card large">
+    <div class="chart-title">Surrender / Recovery / Abscond Trend</div>
+    <div class="chart tall"><canvas id="surrenderChart"></canvas></div>
+  </div>
+  <div class="table-wrap">
+    <table id="surrenderTable"><tr><th>Date</th><th>Sur</th><th>Rec</th><th>Abs</th></tr></table>
+  </div>
+</div>
+
+<div id="v" class="panel">
+  <div class="panel-shell movie-shell">
+    <div class="chart-title">Vendor Analysis</div>
+    <div class="chart-subtitle">Separate vendor-wise view for swap, charger, active, abscond, repair and RFD.</div>
+    <div class="chart-grid">
+      <div class="chart-card"><div class="chart-title">Vendor-wise Swap</div><div class="chart"><canvas id="vVendorSwapChart"></canvas></div><div id="vVendorSwapLegend" class="legend-box"></div></div>
+      <div class="chart-card"><div class="chart-title">Vendor-wise Charger</div><div class="chart"><canvas id="vVendorChargerChart"></canvas></div><div id="vVendorChargerLegend" class="legend-box"></div></div>
+      <div class="chart-card"><div class="chart-title">Vendor-wise Active</div><div class="chart"><canvas id="vVendorActiveChart"></canvas></div><div id="vVendorActiveLegend" class="legend-box"></div></div>
+      <div class="chart-card"><div class="chart-title">Vendor-wise Abscond</div><div class="chart"><canvas id="vVendorAbscondChart"></canvas></div><div id="vVendorAbscondLegend" class="legend-box"></div></div>
+      <div class="chart-card"><div class="chart-title">Vendor-wise Repair</div><div class="chart"><canvas id="vVendorRepairChart"></canvas></div><div id="vVendorRepairLegend" class="legend-box"></div></div>
+      <div class="chart-card"><div class="chart-title">Vendor-wise RFD</div><div class="chart"><canvas id="vVendorRfdChart"></canvas></div><div id="vVendorRfdLegend" class="legend-box"></div></div>
+    </div>
+    <div class="table-wrap"><table id="vVendorTable"><tr><th>Vendor</th><th>Swap</th><th>Charger</th><th>Active</th><th>Abscond</th><th>Repair</th><th>RFD</th></tr></table></div>
+  </div>
+</div>
+
+<div id="o" class="panel">
+  <div class="panel-shell movie-shell">
+    <div class="chart-title">Order Analysis</div>
+    <div class="chart-subtitle">Client-wise total orders, live orders, and rider order buckets in dedicated separate view.</div>
+    <div class="grid">
+      <div class="card"><div class="label">Total Last7Daysorders</div><div class="value" id="oTotalOrders">-</div></div>
+      <div class="card"><div class="label">Total Live Orders</div><div class="value" id="oLiveOrders">-</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card"><div class="chart-title">Client-wise Total Orders</div><div class="chart"><canvas id="oClientOrdersChart"></canvas></div><div id="oClientOrdersLegend" class="legend-box"></div></div>
+      <div class="chart-card"><div class="chart-title">Client-wise Live Orders</div><div class="chart"><canvas id="oClientLiveChart"></canvas></div><div id="oClientLiveLegend" class="legend-box"></div></div>
+      <div class="chart-card"><div class="chart-title">Rider Bucket &lt; 50</div><div class="chart"><canvas id="oBucketLt50Chart"></canvas></div><div id="oBucketLt50Legend" class="legend-box"></div></div>
+      <div class="chart-card"><div class="chart-title">Rider Bucket 50 - 100</div><div class="chart"><canvas id="oBucket50to100Chart"></canvas></div><div id="oBucket50to100Legend" class="legend-box"></div></div>
+      <div class="chart-card"><div class="chart-title">Rider Bucket 100 - 200</div><div class="chart"><canvas id="oBucket100to200Chart"></canvas></div><div id="oBucket100to200Legend" class="legend-box"></div></div>
+      <div class="chart-card"><div class="chart-title">Rider Bucket 200+</div><div class="chart"><canvas id="oBucket200PlusChart"></canvas></div><div id="oBucket200PlusLegend" class="legend-box"></div></div>
+    </div>
+    <div class="table-wrap"><table id="oOrdersTable"><tr><th>Client</th><th>Total Orders</th><th>Live Orders</th><th>&lt;50</th><th>50-100</th><th>100-200</th><th>200+</th></tr></table></div>
+  </div>
+</div>
+
+<div id="m" class="panel">
+  <div class="panel-shell movie-shell">
+    <div class="chart-title">Movement Analysis</div>
+    <div class="chart-subtitle">No total deployed / surrendered here. Only today and last 7 days, plus day-by-day comparison.</div>
+    <div class="grid">
+      <div class="card"><div class="label">Today Deploy</div><div class="value" id="mTodayDeploy">-</div></div>
+      <div class="card"><div class="label">Today Surrender</div><div class="value" id="mTodaySurrender">-</div></div>
+      <div class="card"><div class="label">Last 7 Days Deploy</div><div class="value" id="mWeekDeploy">-</div></div>
+      <div class="card"><div class="label">Last 7 Days Surrender</div><div class="value" id="mWeekSurrender">-</div></div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card large"><div class="chart-title">Deploy vs Surrender • Day by Day</div><div class="chart tall"><canvas id="mCompareChart"></canvas></div><div id="mCompareLegend" class="legend-box"></div></div>
+      <div class="chart-card"><div class="chart-title">RFD Donut • Swap vs Charger</div><div class="chart"><canvas id="mRfdTypeChart"></canvas></div><div id="mRfdTypeLegend" class="legend-box"></div></div>
+    </div>
+    <div class="table-wrap"><table id="mMovementTable"><tr><th>Date</th><th>Deployed</th><th>Surrendered</th></tr></table></div>
+  </div>
+</div>
+
+
+<script>
+let C={},D={master:[],deployed:[],sr:[]},TL_CACHE=[];
+const PALETTE=['#52d8ff','#18f5b3','#3b82f6','#ffb454','#ff5f7a','#8b7bff','#ff70e1','#22d3ee','#7dd3fc','#93c5fd','#2dd4bf','#f472b6','#f59e0b','#a78bfa'];
+const CLIENT_BRAND_COLORS={
+  'zepto':'#7c3aed',
+  'instamart':'#f97316',
+  'blinkit':'#facc15',
+  'fk':'#ef4444',
+  'fk minutes':'#ef4444',
+  'flipkart':'#ef4444',
+  'bb now':'#22c55e',
+  'bbnow':'#22c55e',
+  'bigbasket':'#22c55e',
+  'zomato':'#ef4444'
+};
+const STATUS_COLORS={active:'#7cfc00',abscond:'#ff1e1e',repair:'#ff8c00',quality:'#00d4ff',rfd:'#ffd60a',rfdNoBattery:'#ff9f1c',missingVehicle:'#ff4d6d',surrender:'#52d8ff',recover:'#ff70e1'};
+const ALL_FILTER='__ALL__';
+Chart.defaults.color='#d7f3ff';
+Chart.defaults.font.family='Segoe UI, system-ui, Arial, sans-serif';
+Chart.defaults.animation=false;
+const DASHBOARD_PASSWORD='';
+let SOUND_ON=false,VOICE_ON=false,AUDIO_CTX=null,DASH_UNLOCKED=true,AUDIO_READY=false,VOICE_READY=false,FILTERS={vendor:ALL_FILTER,client:ALL_FILTER};
+const STATUS_FIELDS=['Current_status','Current Status','Current status','Status','status','Vehicle Status'];
+const VEHICLE_TYPE_FIELDS=['Vehicle Type','Vehicle_Type','vehicle type','Type','VehicleType'];
+const TL_FIELDS=['TL Name','TL','Team Lead','Team Lead Name','TL_Name'];
+const LAST7_ORDER_FIELDS=['Last7Daysorders','Last 7 Days Orders','7 Days Orders','7 day orders','last7daysorders'];
+const LOGIN_FIELDS=['7 days login','7 Days Login','Login Days','login days','7dayslogin'];
+const LIVE_ORDER_FIELDS=['live orders','Live Orders','live_orders','Live orders'];
+const isCh=v=>String(v||'').toLowerCase().includes('charging')||String(v||'').toLowerCase().includes('charger');
+const isSw=v=>String(v||'').toLowerCase().includes('swap');
+const normalizeText=v=>String(v||'').toLowerCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
+const statusOf=row=>pickField(row,STATUS_FIELDS);
+const vehicleTypeOf=row=>pickField(row,VEHICLE_TYPE_FIELDS);
+const tlOf=row=>getTl(pickField(row,TL_FIELDS));
+const orders7Of=row=>num(pickField(row,LAST7_ORDER_FIELDS));
+const login7Of=row=>num(pickField(row,LOGIN_FIELDS));
+const liveOrdersOf=row=>num(pickField(row,LIVE_ORDER_FIELDS));
+const stKey=s=>{
+  const x=normalizeText(s);
+  if(!x) return '';
+  if(/(^|\b)(qc|quality)($|\b)/.test(x)||x.includes('quality check')) return 'quality';
+  if(x.includes('battery')||x.includes('rfd no battery issue')||x.includes('rfd nobattery')||x.includes('no battery')) return 'rfdNoBattery';
+  if(x.includes('missing vehicle in fleet')||x.includes('missing vehicle')||x.includes('missing veh')||x==='mv'||x.includes('vehicle missing')) return 'missingVehicle';
+  if(x.includes('rfd')||x.includes('r&d')) return 'rfd';
+  if(x.includes('abscond')) return 'abscond';
+  if(x.includes('repair')||x.includes('insurance')) return 'repair';
+  if(x.includes('surrender')||x.includes('returned')) return 'surrender';
+  if(x.includes('recover')) return 'recover';
+  if(x.includes('active')) return 'active';
+  if(x==='missing') return 'abscond';
+  return '';
+};
+const hasSt=(s,k)=>stKey(s)===k;
+const normLabel=n=>{const x=String(n||'').trim();const u=x.toUpperCase();if(!x||['N/A','NA','#N/A','NIL','NULL','UNDEFINED','UNASSIGNED','OTHER','OTHERS','CLIENT','COLUMN 11'].includes(u))return null;return u==='FLIPKART MINUTES'?'FK MINUTES':u;};
+const getCl=n=>normLabel(n);
+const getTl=n=>{const x=normLabel(n);return x&&x!=='UNASSIGNED'?x:null;};
+const getDt=v=>{if(!v)return'';const d=String(v).trim();if(/^\d{4}-\d{2}-\d{2}/.test(d))return d.substring(0,10);const t=new Date(d);return !isNaN(t)?new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata'}).format(t):d.substring(0,10);};
+const indiaToday=(off=0)=>{const t=new Date(new Date().toLocaleString('sv-SE',{timeZone:'Asia/Kolkata'}).replace(' ','T'));t.setDate(t.getDate()+off);return t.toISOString().slice(0,10);};
+const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+function num(v){
+  if(typeof v==='number') return isNaN(v)?0:v;
+  const s=String(v??'').replace(/,/g,'').trim();
+  const low=s.toLowerCase();
+  if(!s||low==='#n/a'||low==='n/a'||low==='na'||low==='nil'||low==='null'||low==='undefined') return 0;
+  const n=Number(s);
+  return isNaN(n)?0:n;
+}
+function pickField(row,keys){
+  for(const key of keys){
+    const value=row?.[key];
+    if(value!==undefined&&value!==null&&String(value).trim()!=='') return value;
+  }
+  return '';
+}
+function clientOf(row){return getCl(pickField(row,['CLIENT Name','Client','CLIENT','CLIENT NAME','client']));}
+function vendorOf(row){return normLabel(pickField(row,['Top Vendor','TOP VENDOR','Vendor','Vendor Name','vendor']));}
+function vendorClients(vendor){
+  const set=new Set();
+  (D.master||[]).forEach(r=>{
+    if(vendorOf(r)===vendor){
+      const c=clientOf(r);
+      if(c) set.add(c);
+    }
+  });
+  return set;
+}
+function matchesMasterFilters(row){
+  const vendor=vendorOf(row);
+  const client=clientOf(row);
+  if(FILTERS.vendor!==ALL_FILTER&&vendor!==FILTERS.vendor) return false;
+  if(FILTERS.client!==ALL_FILTER&&client!==FILTERS.client) return false;
+  return true;
+}
+function matchesSecondaryFilters(row,allowedClients){
+  const vendor=vendorOf(row);
+  const client=clientOf(row);
+  if(FILTERS.client!==ALL_FILTER&&client!==FILTERS.client) return false;
+  if(FILTERS.vendor!==ALL_FILTER){
+    if(vendor) return vendor===FILTERS.vendor;
+    if(client&&allowedClients&&allowedClients.has(client)) return true;
+    return false;
+  }
+  return true;
+}
+function setSelectOptions(select,values,current,label){
+  if(!select) return;
+  const html=[`<option value="${ALL_FILTER}">All ${label}</option>`].concat(values.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`)).join('');
+  select.innerHTML=html;
+  select.value=values.includes(current)?current:ALL_FILTER;
+}
+function syncFilterOptions(){
+  const master=D.master||[];
+  const allVendors=[...new Set(master.map(vendorOf).filter(Boolean))].sort();
+  const allClients=[...new Set(master.map(clientOf).filter(Boolean))].sort();
+  const vendorSelect=document.getElementById('vendorFilter');
+  const clientSelect=document.getElementById('clientFilter');
+  const vendors=FILTERS.client!==ALL_FILTER?[...new Set(master.filter(r=>clientOf(r)===FILTERS.client).map(vendorOf).filter(Boolean))].sort():allVendors;
+  const clients=FILTERS.vendor!==ALL_FILTER?[...vendorClients(FILTERS.vendor)].sort():allClients;
+  setSelectOptions(vendorSelect,vendors,FILTERS.vendor,'Vendors');
+  setSelectOptions(clientSelect,clients,FILTERS.client,'Clients');
+  FILTERS.vendor=vendorSelect?.value||ALL_FILTER;
+  FILTERS.client=clientSelect?.value||ALL_FILTER;
+  const filterSummary=document.getElementById('filterSummary');
+  if(filterSummary){
+    const vendorText=FILTERS.vendor===ALL_FILTER?'All vendors':FILTERS.vendor;
+    const clientText=FILTERS.client===ALL_FILTER?'All clients':FILTERS.client;
+    filterSummary.textContent=`Filters: ${vendorText} • ${clientText}`;
+  }
+}
+function clearGlobalFilters(){
+  FILTERS.vendor=ALL_FILTER;
+  FILTERS.client=ALL_FILTER;
+  const vendorSelect=document.getElementById('vendorFilter');
+  const clientSelect=document.getElementById('clientFilter');
+  if(vendorSelect) vendorSelect.value=ALL_FILTER;
+  if(clientSelect) clientSelect.value=ALL_FILTER;
+  syncFilterOptions();
+  render();
+}
+function getFilteredData(){
+  const rawMaster=D.master||[];
+  const allowedClients=FILTERS.vendor!==ALL_FILTER?vendorClients(FILTERS.vendor):null;
+  return {
+    rawMaster,
+    master:rawMaster.filter(matchesMasterFilters),
+    deployed:(D.deployed||[]).filter(r=>matchesSecondaryFilters(r,allowedClients)),
+    sr:(D.sr||[]).filter(r=>matchesSecondaryFilters(r,allowedClients))
+  };
+}
+function applyKpiColors(){
+  const colorMap={
+    a:STATUS_COLORS.active,b:STATUS_COLORS.abscond,rep:STATUS_COLORS.repair,qc:STATUS_COLORS.quality,rf:STATUS_COLORS.rfd,rfnb:STATUS_COLORS.rfdNoBattery,mv:STATUS_COLORS.missingVehicle,
+    asw:STATUS_COLORS.active,ach:STATUS_COLORS.active,absSw:STATUS_COLORS.abscond,absCh:STATUS_COLORS.abscond,
+    repSw:STATUS_COLORS.repair,repCh:STATUS_COLORS.repair,rsw:STATUS_COLORS.rfd,rch:STATUS_COLORS.rfd
+  };
+  Object.entries(colorMap).forEach(([id,color])=>{const el=document.getElementById(id); if(el) el.style.color=color;});
+}
+function tab(n,el){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(n).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  if(DASH_UNLOCKED){
+    playTabSound();
+    aiExplain(el.textContent.trim(), tabInsight(n, el.textContent.trim()), true);
+  }
+}
+function destroy(key){if(C[key]){C[key].destroy();C[key]=null;}}
+function donutOptions(){
+  return {
+    responsive:true,
+    maintainAspectRatio:false,
+    cutout:'58%',
+    animation:false,
+    plugins:{
+      legend:{display:false},
+      tooltip:{backgroundColor:'rgba(3,10,18,.94)',borderColor:'rgba(82,216,255,.35)',borderWidth:1,padding:10}
+    }
+  };
+}
+function lineOptions(){
+  return {
+    responsive:true,
+    maintainAspectRatio:false,
+    animation:false,
+    plugins:{legend:{labels:{color:'#d7f3ff'}}},
+    scales:{
+      x:{ticks:{color:'#79a9c7'},grid:{color:'rgba(82,216,255,.08)'}},
+      y:{ticks:{color:'#79a9c7'},grid:{color:'rgba(82,216,255,.08)'}}
+    }
+  };
+}
+function renderLegend(id,items){
+  const box=document.getElementById(id);
+  if(!box) return;
+  box.innerHTML=items.length?items.map(i=>`<div class="legend-item"><div class="legend-dot" style="background:${typeof i.legendColor==='string'?i.legendColor:i.color}"></div><div><div class="legend-main">${esc(i.label)}: ${i.value}</div>${i.sub?`<div class="legend-sub">${i.sub}</div>`:''}</div></div>`).join(''):'<div class="small-note">No data</div>';
+}
+function makeStripePattern(canvas,primary='#ef4444',secondary='#ffffff'){
+  const patternCanvas=document.createElement('canvas');
+  patternCanvas.width=16; patternCanvas.height=16;
+  const pctx=patternCanvas.getContext('2d');
+  pctx.fillStyle=secondary;
+  pctx.fillRect(0,0,16,16);
+  pctx.strokeStyle=primary;
+  pctx.lineWidth=6;
+  pctx.beginPath();
+  pctx.moveTo(-4,16); pctx.lineTo(16,-4);
+  pctx.moveTo(4,20); pctx.lineTo(20,4);
+  pctx.stroke();
+  return canvas.getContext('2d').createPattern(patternCanvas,'repeat');
+}
+function resolveBrandColor(canvas,item,idx){
+  const label=String(item?.label||'').toLowerCase().trim();
+  if(label.includes('zepto')) return {fill:CLIENT_BRAND_COLORS['zepto'],legendColor:CLIENT_BRAND_COLORS['zepto']};
+  if(label.includes('instamart')) return {fill:CLIENT_BRAND_COLORS['instamart'],legendColor:CLIENT_BRAND_COLORS['instamart']};
+  if(label.includes('blinkit')) return {fill:CLIENT_BRAND_COLORS['blinkit'],legendColor:CLIENT_BRAND_COLORS['blinkit']};
+  if(label.includes('fk minutes')||label==='fk'||label.includes('flipkart')) return {fill:CLIENT_BRAND_COLORS['fk'],legendColor:CLIENT_BRAND_COLORS['fk']};
+  if(label.includes('bb now')||label.includes('bigbasket')) return {fill:CLIENT_BRAND_COLORS['bb now'],legendColor:CLIENT_BRAND_COLORS['bb now']};
+  if(label.includes('zomato')) return {fill:makeStripePattern(canvas,'#ef4444','#ffffff'),legendColor:'linear-gradient(135deg,#ef4444 0%,#ef4444 50%,#ffffff 50%,#ffffff 100%)'};
+  return {fill:item.color||PALETTE[idx%PALETTE.length],legendColor:item.color||PALETTE[idx%PALETTE.length]};
+}
+function makeDonut(key,canvasId,legendId,items){
+  destroy(key);
+  const canvas=document.getElementById(canvasId);
+  if(!canvas) return;
+  const usable=items.filter(i=>Number(i.value)>0).map((item,idx)=>{
+    const brand=resolveBrandColor(canvas,item,idx);
+    return {...item,color:brand.fill,legendColor:brand.legendColor};
+  });
+  const data=usable.length?usable:[{label:'No data',value:1,color:'#334155',legendColor:'#334155',sub:''}];
+  C[key]=new Chart(canvas,{type:'doughnut',data:{labels:data.map(i=>i.label),datasets:[{data:data.map(i=>i.value),backgroundColor:data.map(i=>i.color),borderColor:'#04101a',borderWidth:2,hoverOffset:6}]},options:donutOptions()});
+  if(legendId) renderLegend(legendId,usable);
+}
+function sortStats(obj,metric){
+  return Object.keys(obj).map(name=>({name,...obj[name]})).sort((a,b)=>(b[metric]||0)-(a[metric]||0)||a.name.localeCompare(b.name));
+}
+function summarizeRows(rows){
+  return {
+    total:rows.length,
+    active:rows.filter(r=>hasSt(statusOf(r),'active')).length,
+    abscond:rows.filter(r=>hasSt(statusOf(r),'abscond')).length,
+    repair:rows.filter(r=>hasSt(statusOf(r),'repair')).length,
+    quality:rows.filter(r=>hasSt(statusOf(r),'quality')).length,
+    rfd:rows.filter(r=>hasSt(statusOf(r),'rfd')).length,
+    rfdNoBattery:rows.filter(r=>hasSt(statusOf(r),'rfdNoBattery')).length,
+    missingVehicle:rows.filter(r=>hasSt(statusOf(r),'missingVehicle')).length,
+    swap:rows.filter(r=>isSw(vehicleTypeOf(r))).length,
+    charger:rows.filter(r=>isCh(vehicleTypeOf(r))).length,
+    zeroOrders:rows.filter(r=>orders7Of(r)===0).length,
+    loginBelow3:rows.filter(r=>{const v=login7Of(r);return v>0&&v<3;}).length,
+    activeSwap:rows.filter(r=>hasSt(statusOf(r),'active')&&isSw(vehicleTypeOf(r))).length,
+    activeCharger:rows.filter(r=>hasSt(statusOf(r),'active')&&isCh(vehicleTypeOf(r))).length,
+    abscondSwap:rows.filter(r=>hasSt(statusOf(r),'abscond')&&isSw(vehicleTypeOf(r))).length,
+    abscondCharger:rows.filter(r=>hasSt(statusOf(r),'abscond')&&isCh(vehicleTypeOf(r))).length
+  };
+}
+function asItems(arr,metric,labelFn,subFn){
+  return arr.filter(x=>(x[metric]||0)>0).map((x,idx)=>({label:labelFn?labelFn(x):x.name,value:x[metric]||0,color:PALETTE[idx%PALETTE.length],sub:subFn?subFn(x):''}));
+}
+
+function eventStatus(row){
+  return normalizeText(pickField(row,['Status','status','Type','C','Status_C','Movement','Action','Event','Transaction Type','Movement Type','Nature']));
+}
+function eventDate(row){
+  return getDt(pickField(row,['Date','Timestamp','timestamp','date','S','Created At','Created','Updated At','updated_at','Surrender Date','Movement Date']));
+}
+function eventClient(row){
+  return getCl(pickField(row,['Client','CLIENT Name','CLIENT','client','Client Name']));
+}
+function eventTypeKey(row){
+  const status=eventStatus(row);
+  if(status.includes('recov')) return 'recover';
+  if(status.includes('abscon')) return 'abscond';
+  if(status.includes('surr')||status.includes('return')||status.includes('hand over')||status.includes('handover')) return 'surrender';
+  if(status.includes('missing vehicle')) return 'abscond';
+  return '';
+}
+function hasExplicitMovementType(rows){
+  return (rows||[]).some(r=>!!eventTypeKey(r));
+}
+function isSurrenderEvent(row,assumeBlankAsSurrender=false){
+  const type=eventTypeKey(row);
+  if(type) return type==='surrender';
+  return !!assumeBlankAsSurrender;
+}
+function isRecoveryEvent(row){
+  return eventTypeKey(row)==='recover';
+}
+function isAbscondEvent(row){
+  return eventTypeKey(row)==='abscond';
+}
+
+function initAudio(){
+  if(AUDIO_READY) return;
+  try{AUDIO_CTX=new (window.AudioContext||window.webkitAudioContext)();AUDIO_READY=true;}catch(e){AUDIO_READY=false;}
+}
+function warmVoices(){
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.getVoices();
+  VOICE_READY=true;
+}
+function pickAssistantVoice(){
+  if(!('speechSynthesis' in window)) return null;
+  const voices=window.speechSynthesis.getVoices()||[];
+  if(!voices.length) return null;
+  const ranked=[
+    /google uk english male/i,
+    /microsoft david/i,
+    /microsoft guy/i,
+    /zira/i,
+    /samantha/i,
+    /english/i
+  ];
+  for(const rx of ranked){
+    const hit=voices.find(v=>rx.test(`${v.name} ${v.voiceURI}`));
+    if(hit) return hit;
+  }
+  return voices[0]||null;
+}
+function showHud(title='JARVIS LINK ACTIVE',sub='Preparing secure live sync and dashboard response.'){
+  const hud=document.getElementById('loadingHud');
+  if(!hud) return;
+  const t=document.getElementById('hudTitle');
+  const s=document.getElementById('hudSub');
+  if(t) t.textContent=title;
+  if(s) s.textContent=sub;
+  hud.classList.add('active');
+  hud.setAttribute('aria-hidden','false');
+}
+function hideHud(){
+  const hud=document.getElementById('loadingHud');
+  if(!hud) return;
+  hud.classList.remove('active');
+  hud.setAttribute('aria-hidden','true');
+}
+function tone(freq,duration,type='sine',gain=.02,delay=0){
+  if(!SOUND_ON||!AUDIO_READY) return;
+  const now=AUDIO_CTX.currentTime+delay;
+  const osc=AUDIO_CTX.createOscillator();
+  const vol=AUDIO_CTX.createGain();
+  const filter=AUDIO_CTX.createBiquadFilter();
+  filter.type='lowpass'; filter.frequency.setValueAtTime(type==='sawtooth'?1400:2200,now);
+  osc.type=type; osc.frequency.setValueAtTime(freq,now);
+  vol.gain.setValueAtTime(0.0001,now);
+  vol.gain.exponentialRampToValueAtTime(gain,now+.018);
+  vol.gain.exponentialRampToValueAtTime(0.0001,now+duration);
+  osc.connect(filter).connect(vol).connect(AUDIO_CTX.destination);
+  osc.start(now); osc.stop(now+duration+.03);
+}
+function noise(duration=.12,gain=.01,delay=0,cutoff=900){
+  if(!SOUND_ON||!AUDIO_READY) return;
+  const buffer=AUDIO_CTX.createBuffer(1,Math.max(1,Math.floor(AUDIO_CTX.sampleRate*duration)),AUDIO_CTX.sampleRate);
+  const data=buffer.getChannelData(0);
+  for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*(1-i/data.length);
+  const src=AUDIO_CTX.createBufferSource(); src.buffer=buffer;
+  const filter=AUDIO_CTX.createBiquadFilter(); filter.type='lowpass'; filter.frequency.value=cutoff;
+  const vol=AUDIO_CTX.createGain(); const now=AUDIO_CTX.currentTime+delay;
+  vol.gain.setValueAtTime(gain,now); vol.gain.exponentialRampToValueAtTime(0.0001,now+duration);
+  src.connect(filter).connect(vol).connect(AUDIO_CTX.destination); src.start(now);
+}
+function hydraulicSigh(delay=0){
+  noise(.16,.012,delay,520);
+  tone(92,.12,'sawtooth',.010,delay+.01);
+  tone(124,.14,'triangle',.008,delay+.05);
+  tone(168,.10,'sine',.006,delay+.08);
+}
+function arcReactorRise(delay=0){
+  tone(180,.10,'triangle',.010,delay);
+  tone(260,.12,'sine',.012,delay+.03);
+  tone(420,.16,'triangle',.010,delay+.08);
+  tone(720,.22,'sine',.009,delay+.15);
+}
+function playUnlockSound(){
+  tone(165,.11,'triangle',.016,0);
+  hydraulicSigh(.02);
+  tone(330,.12,'sine',.014,.05);
+  arcReactorRise(.08);
+  noise(.14,.009,.10,1400);
+  tone(880,.24,'sine',.012,.20);
+}
+function playTabSound(){
+  tone(560,.08,'sine',.012,0);
+  tone(830,.09,'triangle',.010,.025);
+  hydraulicSigh(.02);
+  tone(640,.12,'sine',.008,.11);
+}
+function playConnectSound(){
+  tone(240,.08,'sine',.012,0);
+  tone(480,.12,'triangle',.010,.05);
+}
+function toggleSound(){ return; }
+function toggleVoice(){ return; }
+function aiExplain(){ return; }
+function tabInsight(id,name){
+  const insights={
+    f:'Fleet Status terminal provides a holistic view of the Chennai EV ecosystem. Active, Abscond, Repair, Quality Check, RFD, RFD No Battery, and Missing Vehicle metrics are tracked in real-time.',
+    c:'Client-wise Analysis breaks down the fleet by delivery partner. Zepto, BigBasket, and Flipkart metrics are isolated for individual performance tracking.',
+    t:'Team Lead Analysis isolates performance by supervisor. This view helps identify operational bottlenecks at the ground level.',
+    d:'Deployment terminal tracks new bike onboarding. The trend graph shows daily and weekly deployment velocity.',
+    r:'Surrender tab monitors bike returns, recoveries, and absconding trends. This is critical for asset protection and fleet health.',
+    v:'Vendor Analysis provides a comparative view of different EV providers across all key operational metrics.',
+    o:'Orders Data focuses on rider productivity. It categorizes the fleet based on order volume and live delivery status.',
+    m:'Movement Analysis focuses on the net flow of the fleet. It compares daily deployments against surrenders to track growth momentum.'
+  };
+  return insights[id]||`Accessing the ${name} terminal. System ready for data analysis.`;
+}
+function handleExplainTarget(){ return; }
+function setupAssistant(){}
+function unlockDashboard(){
+  return;
+}
+function setupSecurity(){
+  document.body.classList.remove('locked');
+  const lock=document.getElementById('lockScreen');
+  if(lock) lock.remove();
+  DASH_UNLOCKED=true;
+  syncFilterOptions();
+  load();
+}
+function ensureStat(map,key,seed){if(!map[key]) map[key]=JSON.parse(JSON.stringify(seed)); return map[key];}
+function bucketKey(v){if(v<50) return 'lt50'; if(v<=100) return 'b50_100'; if(v<=200) return 'b100_200'; return 'b200p';}
+async function load(){
+  const baseUrl = document.getElementById('url').value.trim();
+  const statusEl = document.getElementById('loadStatus');
+  const setLoadStatus = (msg, ok=false) => {
+    if(!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.style.color = ok ? 'var(--green)' : 'var(--amber)';
+  };
+  const isSheetLikeUrl = /docs\.google\.com\/spreadsheets\/d\//.test(baseUrl) || /^[A-Za-z0-9_-]{25,}$/.test(baseUrl);
+  const isAppsScriptUrl = /script\.google\.com\/macros\//.test(baseUrl) || /script\.googleusercontent\.com\//.test(baseUrl);
+  if(!/^https?:/i.test(location.href)){
+    setLoadStatus('Opened from app preview. If live sync fails, open the downloaded file directly in Chrome.', false);
+  }else{
+    setLoadStatus('Connecting to live data...', false);
+  }
+  showHud('SYNCING LIVE GRID','Loading Chennai EV fleet data and preparing AI responses.');
+  playConnectSound();
+
+  const onData = (res) => {
+    D.master   = (res && res.master)   || [];
+    D.deployed = (res && res.deployed) || [];
+    D.sr       = (res && res.surrenderRecovered) || [];
+    render();
+    hideHud();
+    setLoadStatus('Live data loaded successfully.', true);
+    aiExplain('Live sync ready',
+              'Live data is now loaded. Touch any card, chart, or tab and I will explain it on screen.', false);
+  };
+  const onError = (msg) => {
+    hideHud();
+    console.error('[load] backend error:', msg);
+    document.getElementById('lastLoaded').textContent='Live sync failed';
+    setLoadStatus(msg, false);
+  };
+
+  function loadJsonp(){
+    return new Promise((resolve, reject) => {
+      const cb  = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*1e6);
+      const sep = baseUrl.includes('?') ? '&' : '?';
+      const s   = document.createElement('script');
+      const t   = setTimeout(() => {
+        cleanup();
+        reject(new Error('JSONP timed out. If your Apps Script returns plain JSON only, open this file in Chrome or add callback support.'));
+      }, 20000);
+      const cleanup = () => {
+        clearTimeout(t);
+        try{ delete window[cb]; }catch(_){ window[cb] = undefined; }
+        if(s && s.parentNode) s.parentNode.removeChild(s);
+      };
+      window[cb] = (res) => { cleanup(); resolve(res); };
+      s.onerror   = () => { cleanup(); reject(new Error('JSONP script load failed. Check Apps Script deployment access = Anyone.')); };
+      s.src       = baseUrl + sep + 'action=all&callback=' + cb;
+      document.body.appendChild(s);
+    });
+  }
+
+  function loadFetch(){
+    return fetch(baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'action=all', {
+      method  : 'POST',
+      headers : { 'Content-Type': 'text/plain;charset=utf-8' },
+      body    : '{}',
+      redirect: 'follow'
+    }).then(r => {
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return r.text();
+    }).then(txt => {
+      const m = txt.match(/^[^(]*\(([\s\S]*)\)\s*;?\s*$/);
+      return JSON.parse(m ? m[1] : txt);
+    });
+  }
+
+  function loadGviz(){
+    const id = (baseUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || [,''])[1] || (isSheetLikeUrl ? baseUrl : '');
+    if(!id) return Promise.reject(new Error('Sheet fallback skipped for non-Sheet URL.'));
+    const url = /docs\.google\.com\/spreadsheets\/d\//.test(baseUrl)
+      ? 'https://docs.google.com/spreadsheets/d/' + id + '/gviz/tq?tqx=out:json'
+      : 'https://docs.google.com/spreadsheets/d/' + id + '/gviz/tq?tqx=out:json';
+    return fetch(url).then(r => r.text()).then(txt => {
+      const a = txt.indexOf('{'), b = txt.lastIndexOf('}');
+      if(a < 0 || b < 0) throw new Error('Sheet fallback returned an invalid response.');
+      return { master: [], deployed: [], surrenderRecovered: [], _gviz: JSON.parse(txt.slice(a, b+1)) };
+    });
+  }
+
+  loadJsonp()
+    .catch(e1 => {
+      console.warn('[load] JSONP failed:', e1.message);
+      return loadFetch().catch(e2 => {
+        console.warn('[load] fetch failed:', e2.message);
+        if(isSheetLikeUrl && !isAppsScriptUrl){
+          return loadGviz().catch(e3 => {
+            throw new Error('Live sync failed. JSONP: ' + e1.message + ' Fetch: ' + e2.message + ' Sheet fallback: ' + e3.message);
+          });
+        }
+        throw new Error('Live sync failed. JSONP: ' + e1.message + ' Fetch: ' + e2.message + ' Open this file directly in Chrome (not inside WhatsApp/preview) or use an Apps Script URL deployed for Anyone.');
+      });
+    })
+    .then(onData).catch(err => onError(err.message || String(err)));
+}
+function render(){
+  syncFilterOptions();
+  const filtered=getFilteredData();
+  const m=filtered.master,d=filtered.deployed,sr=filtered.sr;
+  const td=indiaToday(0);
+  const wa=indiaToday(-7);
+  const rowText=m.length===filtered.rawMaster.length?String(m.length):m.length+' / '+filtered.rawMaster.length;
+  document.getElementById('rowCount').textContent=rowText;
+  document.getElementById('lastLoaded').textContent='loaded @ '+new Date().toLocaleTimeString();
+
+  const hasMovementType=hasExplicitMovementType(sr);
+  const a=m.filter(r=>hasSt(statusOf(r),'active')).length;
+  const b=m.filter(r=>hasSt(statusOf(r),'abscond')).length;
+  const rep=m.filter(r=>hasSt(statusOf(r),'repair')).length;
+  const rf=m.filter(r=>hasSt(statusOf(r),'rfd')).length;
+  const qc=m.filter(r=>hasSt(statusOf(r),'quality')).length;
+  const rfnb=m.filter(r=>hasSt(statusOf(r),'rfdNoBattery')).length;
+  const mv=m.filter(r=>hasSt(statusOf(r),'missingVehicle')).length;
+  const surS=sr.filter(r=>eventDate(r)===td&&isSurrenderEvent(r,!hasMovementType)&&!isRecoveryEvent(r)&&!isAbscondEvent(r)).length;
+  const recS=d.filter(r=>getDt(r['Date']||r['Timestamp']||r['date'])===td).length;
+
+  document.getElementById('a').textContent=a;
+  document.getElementById('b').textContent=b;
+  document.getElementById('rep').textContent=rep;
+  document.getElementById('qc').textContent=qc;
+  document.getElementById('rf').textContent=rf;
+  document.getElementById('rfnb').textContent=rfnb;
+  document.getElementById('mv').textContent=mv;
+  document.getElementById('sur').textContent=surS;
+  document.getElementById('rec').textContent=recS;
+  applyKpiColors();
+
+  const activeSwap=m.filter(r=>hasSt(statusOf(r),'active')&&isSw(vehicleTypeOf(r))).length;
+  const activeCharger=m.filter(r=>hasSt(statusOf(r),'active')&&isCh(vehicleTypeOf(r))).length;
+  const absSw=m.filter(r=>hasSt(statusOf(r),'abscond')&&isSw(vehicleTypeOf(r))).length;
+  const absCh=m.filter(r=>hasSt(statusOf(r),'abscond')&&isCh(vehicleTypeOf(r))).length;
+  const repSw=m.filter(r=>hasSt(statusOf(r),'repair')&&isSw(vehicleTypeOf(r))).length;
+  const repCh=m.filter(r=>hasSt(statusOf(r),'repair')&&isCh(vehicleTypeOf(r))).length;
+  const rsw=m.filter(r=>hasSt(statusOf(r),'rfd')&&isSw(vehicleTypeOf(r))).length;
+  const rch=m.filter(r=>hasSt(statusOf(r),'rfd')&&isCh(vehicleTypeOf(r))).length;
+  document.getElementById('asw').textContent=activeSwap;
+  document.getElementById('ach').textContent=activeCharger;
+  document.getElementById('absSw').textContent=absSw;
+  document.getElementById('absCh').textContent=absCh;
+  document.getElementById('repSw').textContent=repSw;
+  document.getElementById('repCh').textContent=repCh;
+  document.getElementById('rsw').textContent=rsw;
+  document.getElementById('rch').textContent=rch;
+
+  const fleetSegments=[
+    {label:'Active',value:a,color:STATUS_COLORS.active},
+    {label:'Abscond',value:b,color:STATUS_COLORS.abscond},
+    {label:'Repair',value:rep,color:STATUS_COLORS.repair},
+    {label:'Quality Check',value:qc,color:STATUS_COLORS.quality},
+    {label:'RFD',value:rf,color:STATUS_COLORS.rfd},
+    {label:'RFD No Battery',value:rfnb,color:STATUS_COLORS.rfdNoBattery},
+    {label:'Missing Vehicle',value:mv,color:STATUS_COLORS.missingVehicle}
+  ];
+  const total=(a+b+rep+qc+rf+rfnb+mv)||1;
+  const extraLegend=[
+    {label:'Today Surrender',value:surS,color:STATUS_COLORS.surrender,sub:'India-date surrender count'},
+    {label:'Today Deployed',value:recS,color:STATUS_COLORS.recover,sub:'India-date deployment count'}
+  ];
+  document.getElementById('pulseBar').innerHTML=fleetSegments.filter(s=>s.value>0).map(s=>`<div class="pulse-seg" style="width:${(s.value/total)*100}%;background:${s.color}">${s.value}</div>`).join('');
+  renderLegend('pulseLegend',[...fleetSegments.filter(s=>s.value>0).map(s=>({...s,sub:`${((s.value/total)*100).toFixed(1)}% of fleet`})),...extraLegend]);
+
+  makeDonut('status','statusChart','statusLegend',fleetSegments.map(s=>({...s,sub:`${((s.value/total)*100).toFixed(1)}% of total`})));
+  makeDonut('activeAbsVehicle','activeAbsVehicleChart','activeAbsVehicleLegend',[
+    {label:'Active Swap',value:activeSwap,color:STATUS_COLORS.active,sub:'Active swap bikes'},
+    {label:'Active Charger',value:activeCharger,color:'#6dff9a',sub:'Active charger bikes'},
+    {label:'Abscond Swap',value:absSw,color:'#ff5a5a',sub:'Abscond swap bikes'},
+    {label:'Abscond Charger',value:absCh,color:STATUS_COLORS.abscond,sub:'Abscond charger bikes'}
+  ]);
+  makeDonut('repairType','repairTypeChart','repairTypeLegend',[
+    {label:'Repair Swap',value:repSw,color:STATUS_COLORS.repair,sub:'Swap vehicles under repair'},
+    {label:'Repair Charger',value:repCh,color:'#ffb347',sub:'Charging vehicles under repair'}
+  ]);
+
+  const byC={};
+  m.forEach(r=>{const c=clientOf(r);if(c){if(!byC[c])byC[c]=[];byC[c].push(r);}});
+  const clientStats={};
+  Object.keys(byC).forEach(c=>clientStats[c]=summarizeRows(byC[c]));
+  const clientTotal=sortStats(clientStats,'total');
+  const clientActive=sortStats(clientStats,'active');
+  const clientAbscond=sortStats(clientStats,'abscond');
+  const clientZero=sortStats(clientStats,'zeroOrders');
+  const clientLogin=sortStats(clientStats,'loginBelow3');
+  const clientFocus=clientTotal.map(x=>({...x,focus:(x.active||0)+(x.abscond||0)})).sort((a,b)=>b.focus-a.focus||a.name.localeCompare(b.name));
+
+  makeDonut('clientFocus','clientFocusChart','clientFocusLegend',asItems(clientFocus,'focus',x=>x.name,x=>`Active ${x.active} • Abscond ${x.abscond} • Swap ${x.swap} • Charger ${x.charger}`));
+  makeDonut('clientTotal','clientTotalChart','clientTotalLegend',asItems(clientTotal,'total',x=>x.name,x=>`Active ${x.active} • Abscond ${x.abscond}`));
+  makeDonut('clientActive','clientActiveChart','clientActiveLegend',asItems(clientActive,'active',x=>x.name,x=>`Swap ${x.activeSwap} • Charger ${x.activeCharger}`));
+  makeDonut('clientAbscond','clientAbscondChart','clientAbscondLegend',asItems(clientAbscond,'abscond',x=>x.name,x=>`Swap ${x.abscondSwap} • Charger ${x.abscondCharger}`));
+  makeDonut('clientZeroOrders','clientZeroOrdersChart','clientZeroOrdersLegend',asItems(clientZero,'zeroOrders',x=>x.name,x=>`${x.zeroOrders} bikes with 0 orders in 7 days`));
+  makeDonut('clientLoginBelow3','clientLoginBelow3Chart','clientLoginBelow3Legend',asItems(clientLogin,'loginBelow3',x=>x.name,x=>`${x.loginBelow3} bikes below 3 login days`));
+
+  let cH='<tr><th>Client</th><th>Total EV</th><th>Active</th><th>Abscond</th><th>Swap</th><th>Charger</th><th>Repair</th><th>7D 0 Orders</th><th>Login &lt; 3</th></tr>';
+  clientTotal.forEach(x=>{
+    cH+=`<tr><td><b>${esc(x.name)}</b></td><td>${x.total}</td><td style="color:${STATUS_COLORS.active}">${x.active}</td><td style="color:${STATUS_COLORS.abscond}">${x.abscond}</td><td>${x.swap}</td><td>${x.charger}</td><td style="color:${STATUS_COLORS.repair}">${x.repair}</td><td>${x.zeroOrders}</td><td>${x.loginBelow3}</td></tr>`;
+  });
+  document.getElementById('clientTable').innerHTML=cH;
+
+  const byT={};
+  m.forEach(r=>{const t=tlOf(r);if(t){if(!byT[t])byT[t]=[];byT[t].push(r);}});
+  TL_CACHE=Object.keys(byT).map(t=>({name:t,...summarizeRows(byT[t])})).sort((a,b)=>b.total-a.total||a.name.localeCompare(b.name));
+  renderTL();
+
+  const depB={};
+  d.forEach(r=>{const date=getDt(r['Date']||r['Timestamp']||r['date']);if(date)depB[date]=(depB[date]||0)+1;});
+  const dt=depB[td]||0;const dw=Object.keys(depB).filter(ds=>ds>=wa).reduce((s,ds)=>s+depB[ds],0);
+  document.getElementById('dt').textContent=dt;
+  document.getElementById('dw').textContent=dw;
+  const dL=[],dD=[];
+  Object.keys(depB).sort().reverse().slice(0,14).reverse().forEach(ds=>{dL.push(ds);dD.push(depB[ds]);});
+  destroy('deploy');
+  C.deploy=new Chart(document.getElementById('deployChart'),{type:'line',data:{labels:dL,datasets:[{label:'Deployed',data:dD,borderColor:'#18f5b3',backgroundColor:'rgba(24,245,179,.12)',fill:true,tension:.3}]},options:lineOptions()});
+  let dH='<tr><th>Date</th><th>Bikes Deployed</th></tr>';
+  Object.keys(depB).sort().reverse().slice(0,14).forEach(ds=>{dH+=`<tr><td>${esc(ds)}</td><td>${depB[ds]}</td></tr>`;});
+  document.getElementById('deployTable').innerHTML=dH;
+
+  const surB={},recB={},absB={};
+  sr.forEach(r=>{
+    const date=eventDate(r);
+    if(date){
+      if(isSurrenderEvent(r,!hasMovementType) && !isRecoveryEvent(r) && !isAbscondEvent(r)) surB[date]=(surB[date]||0)+1;
+      if(isRecoveryEvent(r)) recB[date]=(recB[date]||0)+1;
+      if(isAbscondEvent(r)) absB[date]=(absB[date]||0)+1;
+    }
+  });
+  const st=surB[td]||0,rt=recB[td]||0,at=absB[td]||0;
+  const sw=Object.keys(surB).filter(rs=>rs>=wa).reduce((s,rs)=>s+surB[rs],0);
+  const rw=Object.keys(recB).filter(rs=>rs>=wa).reduce((s,rs)=>s+recB[rs],0);
+  const aw=Object.keys(absB).filter(rs=>rs>=wa).reduce((s,rs)=>s+absB[rs],0);
+  document.getElementById('st').textContent=st;
+  document.getElementById('rt').textContent=rt;
+  document.getElementById('at').textContent=at;
+  document.getElementById('sw').textContent=sw;
+  document.getElementById('rw').textContent=rw;
+  document.getElementById('aw').textContent=aw;
+  const rL=[],rSur=[],rRec=[],rAbs=[];
+  const allD=[...new Set([...Object.keys(surB),...Object.keys(recB),...Object.keys(absB)])].sort().reverse().slice(0,14).reverse();
+  allD.forEach(rs=>{rL.push(rs);rSur.push(surB[rs]||0);rRec.push(recB[rs]||0);rAbs.push(absB[rs]||0);});
+  destroy('surrender');
+  C.surrender=new Chart(document.getElementById('surrenderChart'),{type:'line',data:{labels:rL,datasets:[{label:'Surrendered',data:rSur,borderColor:'#ff5f7a',backgroundColor:'rgba(255,95,122,.08)',fill:true,tension:.3},{label:'Recovered',data:rRec,borderColor:'#18f5b3',backgroundColor:'rgba(24,245,179,.08)',fill:true,tension:.3},{label:'Absconding',data:rAbs,borderColor:'#ffb454',backgroundColor:'rgba(255,180,84,.08)',fill:true,tension:.3}]},options:lineOptions()});
+  let rH='<tr><th>Date</th><th>Sur</th><th>Rec</th><th>Abs</th></tr>';
+  allD.slice().reverse().forEach(rs=>{rH+=`<tr><td>${esc(rs)}</td><td>${surB[rs]||0}</td><td>${recB[rs]||0}</td><td>${absB[rs]||0}</td></tr>`;});
+  document.getElementById('surrenderTable').innerHTML=rH;
+  renderAdvancedPanels();
+}
+
+
+function renderAdvancedPanels(){
+  const filtered=getFilteredData();
+  const m=filtered.master, d=filtered.deployed, sr=filtered.sr;
+  const today=indiaToday(0);
+  const weekStart=indiaToday(-6);
+  const clientSeed={active:0,abscond:0,recovered:0,quality:0,rfd:0,rfdNoBattery:0,missingVehicle:0,todayDeploy:0,weekDeploy:0,todaySurrender:0,weekSurrender:0,orders7d:0,liveOrders:0,lt50:0,b50_100:0,b100_200:0,b200p:0};
+  const vendorSeed={swap:0,charger:0,active:0,abscond:0,repair:0,quality:0,rfd:0,rfdNoBattery:0,missingVehicle:0};
+  const byClient={}, byVendor={}, depB={}, surB={};
+  let totalOrders=0,totalLive=0,lt50=0,b50_100=0,b100_200=0,b200p=0,rfdSw=0,rfdCh=0,todayDeploy=0,todaySurrender=0,weekDeploy=0,weekSurrender=0;
+  const hasMovementType=hasExplicitMovementType(sr);
+
+  m.forEach(r=>{
+    const c=clientOf(r);
+    const v=vendorOf(r);
+    const st=stKey(statusOf(r));
+    const orders=orders7Of(r);
+    const live=liveOrdersOf(r);
+    const bk=bucketKey(orders);
+    totalOrders+=orders; totalLive+=live;
+    if(bk==='lt50') lt50++; else if(bk==='b50_100') b50_100++; else if(bk==='b100_200') b100_200++; else b200p++;
+    if(c){
+      const row=ensureStat(byClient,c,clientSeed);
+      row.orders7d+=orders;
+      row.liveOrders+=live;
+      row[bk]++;
+      if(st==='active') row.active++;
+      if(st==='abscond') row.abscond++;
+      if(st==='quality') row.quality++;
+      if(st==='rfd') row.rfd++;
+      if(st==='rfdNoBattery') row.rfdNoBattery++;
+      if(st==='missingVehicle') row.missingVehicle++;
+    }
+    if(v){
+      const vr=ensureStat(byVendor,v,vendorSeed);
+      if(isSw(vehicleTypeOf(r))) vr.swap++;
+      if(isCh(vehicleTypeOf(r))) vr.charger++;
+      if(st==='active') vr.active++;
+      if(st==='abscond') vr.abscond++;
+      if(st==='repair') vr.repair++;
+      if(st==='quality') vr.quality++;
+      if(st==='rfd') vr.rfd++;
+      if(st==='rfdNoBattery') vr.rfdNoBattery++;
+      if(st==='missingVehicle') vr.missingVehicle++;
+    }
+    if(st==='rfd'){if(isSw(vehicleTypeOf(r))) rfdSw++; if(isCh(vehicleTypeOf(r))) rfdCh++;}
+  });
+
+  d.forEach(r=>{
+    const c=eventClient(r);
+    const dx=getDt(r['Date']||r['Timestamp']||r['date']);
+    if(!dx) return;
+    depB[dx]=(depB[dx]||0)+1;
+    if(dx===today){todayDeploy++; if(c) ensureStat(byClient,c,clientSeed).todayDeploy++;}
+    if(dx>=weekStart){weekDeploy++; if(c) ensureStat(byClient,c,clientSeed).weekDeploy++;}
+  });
+
+  sr.forEach(r=>{
+    const c=eventClient(r);
+    const dx=eventDate(r);
+    const isSur=isSurrenderEvent(r,!hasMovementType) && !isRecoveryEvent(r) && !isAbscondEvent(r);
+    const isRec=isRecoveryEvent(r);
+    if(c){
+      const row=ensureStat(byClient,c,clientSeed);
+      if(isRec) row.recovered++;
+      if(isSur && dx===today) row.todaySurrender++;
+      if(isSur && dx && dx>=weekStart) row.weekSurrender++;
+    }
+    if(dx && isSur){
+      surB[dx]=(surB[dx]||0)+1;
+      if(dx===today) todaySurrender++;
+      if(dx>=weekStart) weekSurrender++;
+    }
+  });
+
+  document.getElementById('oTotalOrders').textContent=totalOrders;
+  document.getElementById('oLiveOrders').textContent=totalLive;
+  document.getElementById('mTodayDeploy').textContent=todayDeploy;
+  document.getElementById('mTodaySurrender').textContent=todaySurrender;
+  document.getElementById('mWeekDeploy').textContent=weekDeploy;
+  document.getElementById('mWeekSurrender').textContent=weekSurrender;
+
+  const clientRows=Object.keys(byClient).map(name=>({name,...byClient[name]})).sort((a,b)=>(b.active+b.orders7d+b.liveOrders+b.weekDeploy)-(a.active+a.orders7d+a.liveOrders+a.weekDeploy)||a.name.localeCompare(b.name));
+  const vendorRows=Object.keys(byVendor).map(name=>({name,...byVendor[name]})).sort((a,b)=>(b.active+b.swap+b.charger)-(a.active+a.swap+a.charger)||a.name.localeCompare(b.name));
+
+  makeDonut('vVendorSwap','vVendorSwapChart','vVendorSwapLegend',asItems(vendorRows,'swap',x=>x.name,x=>`Charger ${x.charger}`));
+  makeDonut('vVendorCharger','vVendorChargerChart','vVendorChargerLegend',asItems(vendorRows,'charger',x=>x.name,x=>`Swap ${x.swap}`));
+  makeDonut('vVendorActive','vVendorActiveChart','vVendorActiveLegend',asItems(vendorRows,'active',x=>x.name,x=>`Repair ${x.repair} • RFD ${x.rfd}`));
+  makeDonut('vVendorAbscond','vVendorAbscondChart','vVendorAbscondLegend',asItems(vendorRows,'abscond',x=>x.name,x=>`Active ${x.active}`));
+  makeDonut('vVendorRepair','vVendorRepairChart','vVendorRepairLegend',asItems(vendorRows,'repair',x=>x.name,x=>`RFD ${x.rfd}`));
+  makeDonut('vVendorRfd','vVendorRfdChart','vVendorRfdLegend',asItems(vendorRows,'rfd',x=>x.name,x=>`Swap ${x.swap} • Charger ${x.charger}`));
+
+  makeDonut('oClientOrders','oClientOrdersChart','oClientOrdersLegend',asItems(clientRows,'orders7d',x=>x.name,x=>`Live ${x.liveOrders}`));
+  makeDonut('oClientLive','oClientLiveChart','oClientLiveLegend',asItems(clientRows,'liveOrders',x=>x.name,x=>`Last7Daysorders ${x.orders7d}`));
+  makeDonut('oBucketLt50','oBucketLt50Chart','oBucketLt50Legend',asItems(clientRows,'lt50',x=>x.name,x=>`Below 50 order riders`));
+  makeDonut('oBucket50to100','oBucket50to100Chart','oBucket50to100Legend',asItems(clientRows,'b50_100',x=>x.name,x=>`50 to 100 order riders`));
+  makeDonut('oBucket100to200','oBucket100to200Chart','oBucket100to200Legend',asItems(clientRows,'b100_200',x=>x.name,x=>`100 to 200 order riders`));
+  makeDonut('oBucket200Plus','oBucket200PlusChart','oBucket200PlusLegend',asItems(clientRows,'b200p',x=>x.name,x=>`200 plus order riders`));
+
+  const dates=[...new Set([...Object.keys(depB),...Object.keys(surB)])].sort().reverse().slice(0,21).reverse();
+  destroy('mCompare');
+  C.mCompare=new Chart(document.getElementById('mCompareChart'),{type:'line',data:{labels:dates,datasets:[
+    {label:'Deployed',data:dates.map(x=>depB[x]||0),borderColor:'#61e4c9',backgroundColor:'rgba(97,228,201,.07)',fill:true,tension:.34},
+    {label:'Surrendered',data:dates.map(x=>surB[x]||0),borderColor:'#ff6b91',backgroundColor:'rgba(255,107,145,.07)',fill:true,tension:.34}
+  ]},options:lineOptions()});
+  renderLegend('mCompareLegend',[
+    {label:'Today Deployed',value:todayDeploy,color:'#61e4c9',sub:'Only today deployment count'},
+    {label:'Today Surrendered',value:todaySurrender,color:'#ff6b91',sub:'Only today surrender count'},
+    {label:'Last 7 Days Deploy',value:weekDeploy,color:'#86aefe',sub:'Rolling seven-day deployment total'},
+    {label:'Last 7 Days Surrender',value:weekSurrender,color:'#9d8cff',sub:'Rolling seven-day surrender total'}
+  ]);
+  makeDonut('mRfdType','mRfdTypeChart','mRfdTypeLegend',[
+    {label:'RFD Swap',value:rfdSw,color:STATUS_COLORS.rfd,sub:'Ready swap fleet'},
+    {label:'RFD Charger',value:rfdCh,color:'#ffea70',sub:'Ready charger fleet'}
+  ]);
+
+  let vH='<tr><th>Vendor</th><th>Swap</th><th>Charger</th><th>Active</th><th>Abscond</th><th>Repair</th><th>QC</th><th>RFD</th><th>RFD NB</th><th>Missing</th></tr>';
+  vendorRows.forEach(x=>{vH+=`<tr><td><b>${esc(x.name)}</b></td><td>${x.swap}</td><td>${x.charger}</td><td style="color:${STATUS_COLORS.active}">${x.active}</td><td style="color:${STATUS_COLORS.abscond}">${x.abscond}</td><td style="color:${STATUS_COLORS.repair}">${x.repair}</td><td style="color:${STATUS_COLORS.quality}">${x.quality||0}</td><td style="color:${STATUS_COLORS.rfd}">${x.rfd}</td><td style="color:${STATUS_COLORS.rfdNoBattery}">${x.rfdNoBattery||0}</td><td style="color:${STATUS_COLORS.missingVehicle}">${x.missingVehicle||0}</td></tr>`;});
+  document.getElementById('vVendorTable').innerHTML=vH;
+
+  let oH='<tr><th>Client</th><th>Total Orders</th><th>Live Orders</th><th>&lt;50</th><th>50-100</th><th>100-200</th><th>200+</th></tr>';
+  clientRows.forEach(x=>{oH+=`<tr><td><b>${esc(x.name)}</b></td><td>${x.orders7d}</td><td>${x.liveOrders}</td><td>${x.lt50}</td><td>${x.b50_100}</td><td>${x.b100_200}</td><td>${x.b200p}</td></tr>`;});
+  document.getElementById('oOrdersTable').innerHTML=oH;
+
+  let mH='<tr><th>Date</th><th>Deployed</th><th>Surrendered</th></tr>';
+  dates.slice().reverse().forEach(x=>{mH+=`<tr><td>${esc(x)}</td><td style="color:#61e4c9">${depB[x]||0}</td><td style="color:#ff6b91">${surB[x]||0}</td></tr>`;});
+  document.getElementById('mMovementTable').innerHTML=mH;
+}
+
+function renderTL(){
+  const q=String(document.getElementById('tlSearch')?.value||'').trim().toLowerCase();
+  const rows=TL_CACHE.filter(x=>!q||x.name.toLowerCase().includes(q));
+  makeDonut('tlTotal','tlTotalChart','tlTotalLegend',asItems(rows,'total',x=>x.name,x=>`Active ${x.active} • Abscond ${x.abscond}`));
+  makeDonut('tlActive','tlActiveChart','tlActiveLegend',asItems(rows,'active',x=>x.name,x=>`Swap ${x.activeSwap} • Charger ${x.activeCharger}`));
+  makeDonut('tlAbscond','tlAbscondChart','tlAbscondLegend',asItems(rows,'abscond',x=>x.name,x=>`Swap ${x.abscondSwap} • Charger ${x.abscondCharger}`));
+  let tH='<tr><th>TL Name</th><th>Total Bikes</th><th>Active</th><th>Abscond</th><th>Swap</th><th>Charger</th></tr>';
+  rows.forEach(x=>{tH+=`<tr><td>${esc(x.name)}</td><td>${x.total}</td><td style="color:${STATUS_COLORS.active}">${x.active}</td><td style="color:${STATUS_COLORS.abscond}">${x.abscond}</td><td>${x.swap}</td><td>${x.charger}</td></tr>`;});
+  document.getElementById('tlTable').innerHTML=tH;
+}
+document.getElementById('tlSearch').addEventListener('input',renderTL);
+document.getElementById('vendorFilter').addEventListener('change',e=>{FILTERS.vendor=e.target.value||ALL_FILTER; syncFilterOptions(); render();});
+document.getElementById('clientFilter').addEventListener('change',e=>{FILTERS.client=e.target.value||ALL_FILTER; syncFilterOptions(); render();});
+setupSecurity();
+setupAssistant();
+</script>
+</body>
+</html>
